@@ -32,7 +32,8 @@ namespace OutlookRefresher
                 {
                     Console.WriteLine($"Processing Mailbox {rdoStore.Name}");
                     TimeSpan delta = TimeSpan.Zero; // the amount of time to shift
-                    var IPMRoot = rdoStore.IPMRootFolder;
+                    RDOFolder IPMRoot = rdoStore.IPMRootFolder;
+//                  var IPMRoot = rdoStore.IPMRootFolder;
                     foreach (RDOFolder folder in IPMRoot.Folders) // find newest e-mail in Inbox
                     {
                         Debug.WriteLine($"  Top Level Folder {folder.Name}");
