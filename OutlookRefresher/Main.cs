@@ -1,4 +1,8 @@
-﻿using System;
+﻿// OutlookRefresher by Jack Elmore (jackel@microsoft.com)
+// Stuff normal people don't try to do to e-mail
+// Relies upon Redemption Library http://www.dimastr.com/redemption/home.htm
+
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;

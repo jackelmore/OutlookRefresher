@@ -1,4 +1,8 @@
-﻿using System;
+﻿// OutlookRefresher by Jack Elmore (jackel@microsoft.com)
+// Stuff normal people don't try to do to e-mail
+// Relies upon Redemption Library http://www.dimastr.com/redemption/home.htm
+
+using System;
 using Redemption;
 using System.IO;
 using System.Reflection;
@@ -50,7 +54,7 @@ namespace OutlookRefresher
                     }
 
                     bool loopUI = true;
-                    ConsoleColor cc = Console.ForegroundColor;
+                    ConsoleColor OrigConsoleColor = Console.ForegroundColor;
                     while (loopUI)
                     {
                         if(delta > new TimeSpan(100, 0, 0, 0))
@@ -58,14 +62,14 @@ namespace OutlookRefresher
 
                             Console.ForegroundColor = ConsoleColor.Red;
                             Console.WriteLine("\aARE YOU SURE! THIS IS OVER 100 DAYS!");
-                            Console.ForegroundColor = cc;
+                            Console.ForegroundColor = OrigConsoleColor;
                             Console.WriteLine();
                         }
                         Console.Write("Adjust Inbox and Sent Items ");
                         Console.ForegroundColor = ConsoleColor.Yellow;
                         Console.Write(backInTime ? "BACKWARD " : "FORWARD ");
                         Console.Write($"{delta.Days}d {delta.Hours}h {delta.Minutes}m");
-                        Console.ForegroundColor = cc;
+                        Console.ForegroundColor = OrigConsoleColor;
                         Console.Write("? [Y]es/[N]o/[C]ustom] :");
                         char c = char.ToUpper(Console.ReadKey().KeyChar);
                         Console.WriteLine();
