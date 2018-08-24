@@ -7,7 +7,9 @@ namespace OutlookRefresher
 {
     class AdjustMail
     {
-        public static int AdjustTimeStamp(string mailbox, bool testMode)
+        public static bool backInTime = false;
+
+        public static int AdjustTimeStamp(string mailbox)
         {
             string ProjectDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
@@ -59,8 +61,9 @@ namespace OutlookRefresher
                             Console.ForegroundColor = cc;
                             Console.WriteLine();
                         }
-                        Console.Write("Fast forward Inbox and Sent Items ");
+                        Console.Write("Adjust Inbox and Sent Items ");
                         Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.Write(backInTime ? "BACKWARD " : "FORWARD ");
                         Console.Write($"{delta.Days}d {delta.Hours}h {delta.Minutes}m");
                         Console.ForegroundColor = cc;
                         Console.Write("? [Y]es/[N]o/[C]ustom] :");
@@ -76,15 +79,25 @@ namespace OutlookRefresher
                                     if (folder.Name == "Inbox" || folder.Name == "Sent Items")
                                     {
                                         Console.WriteLine($"    Found {folder.Name} - EntryID {folder.EntryID}");
-                                        PerformMailFix(folder.EntryID, session, delta, testMode);
+                                        PerformMailFix(folder.EntryID, session, delta);
                                     }
                                 }
                                 break;
                             case 'C':
                                 Console.WriteLine("6.12:32    6 days 12 hours 32 minutes 00 seconds");
                                 Console.WriteLine("6:32       8 hours 32 minutes");
+                                Console.WriteLine("-6.12:32   GO BACKWARD 6 days 12 hours 32 minutes 00 seconds");
                                 Console.Write("Enter Custom Offset [d].[hh]:[mm]  --> ");
                                 delta = TimeSpan.Parse(Console.ReadLine());
+                                if(delta < TimeSpan.Zero)
+                                {
+                                    backInTime = true;
+                                    delta = delta - delta - delta; // This is a cheap way to get Abs(TimeSpan) without having to access each field of the struct.
+                                }
+                                else
+                                {
+                                    backInTime = false;
+                                }
                                 break;
                             default:
                                 loopUI = false;
@@ -98,7 +111,7 @@ namespace OutlookRefresher
         }
 
         static int count = 0;
-        private static void PerformMailFix(string folderId, RDOSession session, TimeSpan delta, bool testMode)
+        private static void PerformMailFix(string folderId, RDOSession session, TimeSpan delta)
         {
             RDOFolder folder = session.GetFolderFromID(folderId);
 
@@ -110,9 +123,9 @@ namespace OutlookRefresher
             foreach (RDOMail item in folder.Items)
             {
                 oldTimeStamp = item.ReceivedTime;
-                newTimeStamp = oldTimeStamp + delta;
+                newTimeStamp = backInTime ? oldTimeStamp - delta : oldTimeStamp + delta;
                 item.ReceivedTime = newTimeStamp;
-                if (testMode == false)
+                if (!Program.testMode)
                 {
                     item.Save();
                 }
@@ -122,7 +135,7 @@ namespace OutlookRefresher
             foreach (RDOFolder subFolder in folder.Folders)
             {
                 Console.WriteLine($"      Processing subfolder {subFolder.Name}");
-                PerformMailFix(subFolder.EntryID, session, delta, testMode);
+                PerformMailFix(subFolder.EntryID, session, delta);
             }
         }
         public static DateTime NewestItemInFolder(string folderID, RDOSession session)

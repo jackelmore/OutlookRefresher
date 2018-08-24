@@ -8,9 +8,11 @@ namespace OutlookRefresher
 {
     class Program
     {
+        // global variables for switches because Honey Badger Don't Care and I am lazy.
+        public static bool testMode = false;
+
         static void Main(string[] args)
         {
-            bool testMode = false;
             if(args.Length == 0)
             {
                 Console.WriteLine("Usage: RedemptionApp [-t] <mailbox_name_substring> <mailbox_name_substring> ...");
@@ -19,15 +21,18 @@ namespace OutlookRefresher
             }
             foreach (string arg in args)
             {
-                if(arg.ToLower() == "-t")
+                switch(arg.ToLower())
                 {
-                    Console.WriteLine("*** TEST MODE ENABLED (NO CHANGES WILL BE WRITTEN) ***");
-                    testMode = true;
-                    continue;
+                    case "-t":
+                        Console.WriteLine("*** TEST MODE ENABLED (NO CHANGES WILL BE WRITTEN) ***");
+                        testMode = true;
+                        continue;
+                    default:              
+                        int itemsProcessed = AdjustMail.AdjustTimeStamp(arg);
+                        Console.WriteLine($"Done - {itemsProcessed} items processed. Press any key...");
+                        Console.ReadKey();
+                        break;
                 }
-                int itemsProcessed = AdjustMail.AdjustTimeStamp(arg, testMode);
-                Console.WriteLine($"Done - {itemsProcessed} items processed. Press any key...");
-                Console.ReadKey();
             }
         }
     }
