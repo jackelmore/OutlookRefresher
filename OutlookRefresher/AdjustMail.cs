@@ -14,9 +14,11 @@ namespace OutlookRefresher
 
             RedemptionLoader.DllLocation64Bit = ProjectDir + @"\redemption64.dll";
             RedemptionLoader.DllLocation32Bit = ProjectDir + @"\redemption.dll";
-            if(!File.Exists(RedemptionLoader.DllLocation32Bit) || !File.Exists(RedemptionLoader.DllLocation64Bit))
+            if (!File.Exists(RedemptionLoader.DllLocation32Bit) || !File.Exists(RedemptionLoader.DllLocation64Bit))
             {
                 Console.WriteLine("redemption64.dll (64-bit) or redemption.dll (32-bit) is missing from EXE directory\nTerminating with exit code -1");
+                Console.WriteLine($"redemption64.dll should be here: {RedemptionLoader.DllLocation64Bit}");
+                Console.WriteLine($"redemption.dll   should be here: {RedemptionLoader.DllLocation32Bit}");
                 return -1;
             }
 
@@ -45,19 +47,49 @@ namespace OutlookRefresher
                             Debug.WriteLine($"    Newest item in {folder.Name} is {dtNewest}, delta == {delta}");
                         }
                     }
-                    Console.Write($"Fast forward Inbox and Sent Items {delta.Days}d {delta.Hours}h {delta.Minutes}m? [Y/N] :");
-                    char c = char.ToUpper(Console.ReadKey().KeyChar);
-                    Console.WriteLine();
-                    if (c == 'Y')
+
+                    bool loopUI = true;
+                    ConsoleColor cc = Console.ForegroundColor;
+                    while (loopUI)
                     {
-                        foreach (RDOFolder folder in IPMRoot.Folders) // adjust dates on all items in Inbox and Sent Items (and their subfolders)
+                        if(delta > new TimeSpan(100, 0, 0, 0))
                         {
-                            Debug.WriteLine($"  Processing Folder {folder.Name}");
-                            if (folder.Name == "Inbox" || folder.Name == "Sent Items")
-                            {
-                                Debug.WriteLine($"    Found {folder.Name} - EntryID {folder.EntryID}");
-                                PerformMailFix(folder.EntryID, session, delta);
-                            }
+
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine("\aARE YOU SURE! THIS IS OVER 100 DAYS!");
+                            Console.ForegroundColor = cc;
+                            Console.WriteLine();
+                        }
+                        Console.Write("Fast forward Inbox and Sent Items ");
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.Write($"{delta.Days}d {delta.Hours}h {delta.Minutes}m");
+                        Console.ForegroundColor = cc;
+                        Console.Write("? [Y]es/[N]o/[C]ustom] :");
+                        char c = char.ToUpper(Console.ReadKey().KeyChar);
+                        Console.WriteLine();
+                        switch (c)
+                        {
+                            case 'Y':
+                                loopUI = false;
+                                foreach (RDOFolder folder in IPMRoot.Folders) // adjust dates on all items in Inbox and Sent Items (and their subfolders)
+                                {
+                                    Debug.WriteLine($"  Processing Folder {folder.Name}");
+                                    if (folder.Name == "Inbox" || folder.Name == "Sent Items")
+                                    {
+                                        Debug.WriteLine($"    Found {folder.Name} - EntryID {folder.EntryID}");
+                                        PerformMailFix(folder.EntryID, session, delta);
+                                    }
+                                }
+                                break;
+                            case 'C':
+                                Console.WriteLine("6.12:32    6 days 12 hours 32 minutes 00 seconds");
+                                Console.WriteLine("6:32       8 hours 32 minutes");
+                                Console.Write("Enter Custom Offset [d].[hh]:[mm]  --> ");
+                                delta = TimeSpan.Parse(Console.ReadLine());
+                                break;
+                            default:
+                                loopUI = false;
+                                break;
                         }
                     }
                 }
