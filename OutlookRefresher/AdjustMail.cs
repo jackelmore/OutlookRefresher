@@ -2,13 +2,12 @@
 using Redemption;
 using System.IO;
 using System.Reflection;
-using System.Diagnostics;
 
 namespace OutlookRefresher
 {
     class AdjustMail
     {
-        public static int AdjustTimeStamp(string mailbox)
+        public static int AdjustTimeStamp(string mailbox, bool testMode)
         {
             string ProjectDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
@@ -28,7 +27,7 @@ namespace OutlookRefresher
             var stores = session.Stores; // store == "mailbox" within an Outlook profile
             foreach (RDOStore rdoStore in stores)
             {
-                Debug.WriteLine($"Checking rdoStore == {rdoStore.Name}");
+                Console.WriteLine($"Checking rdoStore == {rdoStore.Name}");
                 
                 if ((rdoStore.Name.ToLower().Contains(mailbox.ToLower())))
                 {
@@ -38,13 +37,13 @@ namespace OutlookRefresher
 //                  var IPMRoot = rdoStore.IPMRootFolder;
                     foreach (RDOFolder folder in IPMRoot.Folders) // find newest e-mail in Inbox
                     {
-                        Debug.WriteLine($"  Top Level Folder {folder.Name}");
+                        Console.WriteLine($"  Top Level Folder {folder.Name}");
                         if (folder.Name == "Inbox")
                         {
-                            Debug.WriteLine($"    Found {folder.Name} - EntryID {folder.EntryID}");
+                            Console.WriteLine($"    Found {folder.Name} - EntryID {folder.EntryID}");
                             DateTime dtNewest = NewestItemInFolder(folder.EntryID, session);
                             delta = DateTime.Now - dtNewest;
-                            Debug.WriteLine($"    Newest item in {folder.Name} is {dtNewest}, delta == {delta}");
+                            Console.WriteLine($"    Newest item in {folder.Name} is {dtNewest}, delta == {delta}");
                         }
                     }
 
@@ -73,11 +72,11 @@ namespace OutlookRefresher
                                 loopUI = false;
                                 foreach (RDOFolder folder in IPMRoot.Folders) // adjust dates on all items in Inbox and Sent Items (and their subfolders)
                                 {
-                                    Debug.WriteLine($"  Processing Folder {folder.Name}");
+                                    Console.WriteLine($"  Processing Folder {folder.Name}");
                                     if (folder.Name == "Inbox" || folder.Name == "Sent Items")
                                     {
-                                        Debug.WriteLine($"    Found {folder.Name} - EntryID {folder.EntryID}");
-                                        PerformMailFix(folder.EntryID, session, delta);
+                                        Console.WriteLine($"    Found {folder.Name} - EntryID {folder.EntryID}");
+                                        PerformMailFix(folder.EntryID, session, delta, testMode);
                                     }
                                 }
                                 break;
@@ -99,7 +98,7 @@ namespace OutlookRefresher
         }
 
         static int count = 0;
-        private static void PerformMailFix(string folderId, RDOSession session, TimeSpan delta)
+        private static void PerformMailFix(string folderId, RDOSession session, TimeSpan delta, bool testMode)
         {
             RDOFolder folder = session.GetFolderFromID(folderId);
 
@@ -113,14 +112,17 @@ namespace OutlookRefresher
                 oldTimeStamp = item.ReceivedTime;
                 newTimeStamp = oldTimeStamp + delta;
                 item.ReceivedTime = newTimeStamp;
-                item.Save();
+                if (testMode == false)
+                {
+                    item.Save();
+                }
                 count++;
-                Debug.WriteLine($"      ReceivedTime is {oldTimeStamp}, set to {newTimeStamp}");
+                Console.WriteLine($"      ReceivedTime is {oldTimeStamp}, set to {newTimeStamp}");
             }
             foreach (RDOFolder subFolder in folder.Folders)
             {
-                Debug.WriteLine($"      Processing subfolder {subFolder.Name}");
-                PerformMailFix(subFolder.EntryID, session, delta);
+                Console.WriteLine($"      Processing subfolder {subFolder.Name}");
+                PerformMailFix(subFolder.EntryID, session, delta, testMode);
             }
         }
         public static DateTime NewestItemInFolder(string folderID, RDOSession session)
