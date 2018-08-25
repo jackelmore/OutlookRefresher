@@ -19,7 +19,7 @@ namespace OutlookRefresher
         {
             if(args.Length == 0)
             {
-                Console.WriteLine("Usage: RedemptionApp [-t] <mailbox_name_substring> <mailbox_name_substring> ...");
+                Console.WriteLine("Usage: OutlookRefresher [-t] <mailbox_name_substring> <mailbox_name_substring> ...");
                 Console.WriteLine("-t: Test Mode (no changes saved)");
                 return;
             }
@@ -28,13 +28,13 @@ namespace OutlookRefresher
                 switch(arg.ToLower())
                 {
                     case "-t":
+                    case "/t":
                         Console.WriteLine("*** TEST MODE ENABLED (NO CHANGES WILL BE WRITTEN) ***");
                         testMode = true;
                         continue;
                     default:              
                         int itemsProcessed = AdjustMail.AdjustTimeStamp(arg);
-                        Console.WriteLine($"Done - {itemsProcessed} items processed. Press any key...");
-                        Console.ReadKey();
+                        Console.WriteLine($"Done - {itemsProcessed} items processed.");
                         break;
                 }
             }

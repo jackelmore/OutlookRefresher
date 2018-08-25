@@ -124,8 +124,6 @@ namespace Redemption
             DllLocation32Bit = Path.Combine(directory, "redemption.dll");
         }
 
-
-
         /*
         static ~Loader()
         {
