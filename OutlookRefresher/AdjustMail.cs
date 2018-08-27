@@ -6,12 +6,19 @@ using System;
 using Redemption;
 using System.IO;
 using System.Reflection;
+using System.Diagnostics;
 
 namespace OutlookRefresher
 {
+    static class Options
+    {
+        static public bool TestMode { get; set; } = false;
+        static public bool VerboseLogging { get; set; } = false;
+        static public bool BackInTime { get; set; } = false;
+    }
+
     class AdjustMail
     {
-        public static bool backInTime = false;
         static int count = 0;
 
         public static int AdjustTimeStamp(string mailbox)
@@ -20,6 +27,7 @@ namespace OutlookRefresher
 
             RedemptionLoader.DllLocation64Bit = ProjectDir + @"\redemption64.dll";
             RedemptionLoader.DllLocation32Bit = ProjectDir + @"\redemption.dll";
+
             if (!File.Exists(RedemptionLoader.DllLocation32Bit) || !File.Exists(RedemptionLoader.DllLocation64Bit))
             {
                 Console.WriteLine("ERROR: redemption64.dll (64-bit) or redemption.dll (32-bit) is missing from EXE directory");
@@ -35,7 +43,7 @@ namespace OutlookRefresher
             var stores = session.Stores; // store == "mailbox" within an Outlook profile
             foreach (RDOStore rdoStore in stores)
             {
-                Console.WriteLine($"Checking Mailbox {rdoStore.Name}");
+                Console.WriteLine($"\nChecking Mailbox {rdoStore.Name}");
 
                 if ((rdoStore.Name.ToLower().Contains(mailbox.ToLower())))
                 {
@@ -45,11 +53,11 @@ namespace OutlookRefresher
 
                     foreach (RDOFolder folder in IPMRoot.Folders) // find newest e-mail in Inbox
                     {
-                        Console.WriteLine($"  Top Level Folder {folder.Name}");
+                        Debug.WriteLine($"  Top Level Folder {folder.Name}");
                         if (folder.Name == "Inbox")
                         {
-                            Console.WriteLine($"    Found {folder.Name} - EntryID {folder.EntryID}");
-                            DateTime dtNewest = NewestItemInFolder(folder.EntryID, session);
+                            Debug.WriteLine($"    Found {folder.Name} - EntryID {folder.EntryID}");
+                            DateTime dtNewest = GetNewestDateTimeInFolder(folder.EntryID, session);
                             delta = DateTime.Now - dtNewest;
                             Console.WriteLine($"    Newest item in {folder.Name} is {dtNewest}, delta == {delta}");
                         }
@@ -65,11 +73,10 @@ namespace OutlookRefresher
                             Console.ForegroundColor = ConsoleColor.Red;
                             Console.WriteLine("\aARE YOU SURE! THIS IS OVER 100 DAYS!");
                             Console.ForegroundColor = OrigConsoleColor;
-                            Console.WriteLine();
                         }
-                        Console.Write("Adjust Inbox and Sent Items ");
+                        Console.Write("\n    Adjust Inbox and Sent Items ");
                         Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.Write(backInTime ? "BACKWARD " : "FORWARD ");
+                        Console.Write(Options.BackInTime ? "BACKWARD " : "FORWARD ");
                         Console.Write($"{delta.Days}d {delta.Hours}h {delta.Minutes}m");
                         Console.ForegroundColor = OrigConsoleColor;
                         Console.Write("? [Y]es/[N]o/[C]ustom] :");
@@ -78,33 +85,34 @@ namespace OutlookRefresher
                         switch (keypress)
                         {
                             case 'y':
+                                Console.WriteLine($"    Processing Mailbox {rdoStore.Name}...");
                                 foreach (RDOFolder folder in IPMRoot.Folders) // adjust dates on all items in Inbox and Sent Items (and their subfolders)
                                 {
-                                    Console.WriteLine($"  Processing Folder {folder.Name}");
+                                    Debug.WriteLine($"  Processing Folder {folder.Name}");
                                     if (folder.Name == "Inbox" || folder.Name == "Sent Items")
                                     {
-                                        Console.WriteLine($"    Found {folder.Name} - EntryID {folder.EntryID}");
+                                        Debug.WriteLine($"    Found {folder.Name} - EntryID {folder.EntryID}");
                                         PerformMailFix(folder.EntryID, session, delta);
                                     }
                                 }
                                 break;
 
                             case 'c':
-                                Console.WriteLine("6.12:32    6 days 12 hours 32 minutes 00 seconds");
-                                Console.WriteLine("6:32       8 hours 32 minutes");
-                                Console.WriteLine("-6.12:32   GO BACKWARD 6 days 12 hours 32 minutes 00 seconds");
-                                Console.Write("Enter Custom Offset [-][d].[hh]:[mm]  --> ");
+                                Console.WriteLine("    6.12:32    6 days 12 hours 32 minutes 00 seconds");
+                                Console.WriteLine("    6:32       8 hours 32 minutes");
+                                Console.WriteLine("    -6.12:32   GO BACKWARD 6 days 12 hours 32 minutes 00 seconds");
+                                Console.Write("    Enter Custom Offset [-][d].[hh]:[mm]  --> ");
 
                                 if (TimeSpan.TryParse(Console.ReadLine(), out delta))
                                 {
                                     if (delta < TimeSpan.Zero) // This is a cheap way to get Abs(TimeSpan) without having to access each field of the struct.
                                     {
-                                        backInTime = true;
+                                        Options.BackInTime = true;
                                         delta = delta - delta - delta;
                                     }
                                     else
                                     {
-                                        backInTime = false;
+                                        Options.BackInTime = false;
                                     }
                                 }
                                 break;
@@ -131,34 +139,28 @@ namespace OutlookRefresher
             foreach (RDOMail item in folder.Items)
             {
                 oldTimeStamp = item.ReceivedTime;
-                newTimeStamp = backInTime ? oldTimeStamp - delta : oldTimeStamp + delta;
+                newTimeStamp = Options.BackInTime ? (oldTimeStamp - delta) : (oldTimeStamp + delta);
                 item.ReceivedTime = newTimeStamp;
-                if (!Program.testMode)
-                {
+                if (!Options.TestMode)
                     item.Save();
-                }
                 count++;
-                Console.WriteLine($"      ReceivedTime is {oldTimeStamp}, set to {newTimeStamp}");
+                Debug.WriteLine($"      ReceivedTime is {oldTimeStamp}, set to {newTimeStamp}");
             }
+
             foreach (RDOFolder subFolder in folder.Folders)
             {
-                Console.WriteLine($"      Processing subfolder {subFolder.Name}");
+                Debug.WriteLine($"      Processing subfolder {subFolder.Name}");
                 PerformMailFix(subFolder.EntryID, session, delta);
             }
         }
-        public static DateTime NewestItemInFolder(string folderID, RDOSession session)
+        public static DateTime GetNewestDateTimeInFolder(string folderID, RDOSession session)
         {
             DateTime dt = DateTime.MinValue;
-
             RDOFolder folder = session.GetFolderFromID(folderID);
 
             foreach(RDOMail item in folder.Items)
-            {
                 if(item.ReceivedTime > dt)
-                {
                     dt = item.ReceivedTime;
-                }
-            }
             return dt;
         }
     }

@@ -4,40 +4,46 @@
 
 using System;
 using System.Diagnostics;
-using System.IO;
-using System.Reflection;
-using Redemption;
 
 namespace OutlookRefresher
 {
     class Program
     {
-        // global variables for switches because Honey Badger Don't Care and I am lazy.
-        public static bool testMode = false;
-
-        static void Main(string[] args)
+        static int Main(string[] args)
         {
-            if(args.Length == 0)
+            if (args.Length == 0)
             {
-                Console.WriteLine("Usage: OutlookRefresher [-t] <mailbox_name_substring> <mailbox_name_substring> ...");
+                Console.WriteLine("Usage: OutlookRefresher [-t] [-v] <mailbox_name_substring> <mailbox_name_substring> ...");
                 Console.WriteLine("-t: Test Mode (no changes saved)");
-                return;
+                Console.WriteLine("-v: Verbose (Debug.WriteLine output to console)");
+                return 1;
             }
-            foreach (string arg in args)
+            else
             {
-                switch(arg.ToLower())
+                foreach (string arg in args)
                 {
-                    case "-t":
-                    case "/t":
-                        Console.WriteLine("*** TEST MODE ENABLED (NO CHANGES WILL BE WRITTEN) ***");
-                        testMode = true;
-                        continue;
-                    default:              
-                        int itemsProcessed = AdjustMail.AdjustTimeStamp(arg);
-                        Console.WriteLine($"Done - {itemsProcessed} items processed.");
-                        break;
+                    switch (arg.ToLower())
+                    {
+                        case "-t":
+                        case "/t":
+                            Console.WriteLine("******************************************************");
+                            Console.WriteLine("*** TEST MODE ENABLED (NO CHANGES WILL BE WRITTEN) ***");
+                            Console.WriteLine("******************************************************");
+                            Options.TestMode = true;
+                            continue;
+                        case "-v":
+                        case "/v":
+                            Console.WriteLine("*** VERBOSE LOGGING ENABLED ***");
+                            Options.VerboseLogging = true;
+                            Debug.Listeners.Add(new ConsoleTraceListener(useErrorStream: false));
+                            break;
+                        default:
+                            Console.WriteLine("{0} total items adjusted. Exiting...", AdjustMail.AdjustTimeStamp(arg));
+                            break;
+                    }
                 }
             }
+            return 0;
         }
     }
 }
