@@ -85,14 +85,13 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Redemption\Interop.Redemption.dll">
+    <Content Include="Interop.Redemption.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Redemption\readme.txt" />
-    <Content Include="Redemption\Redemption.dll">
+    <Content Include="Redemption.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Redemption\Redemption64.dll">
+    <Content Include="Redemption64.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
